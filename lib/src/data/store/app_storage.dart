@@ -30,4 +30,9 @@ class AppStorage {
     await _secureStorage.delete(key: key);
     return true;
   }
+
+  Future<dynamic> removeAll() async {
+    await _secureStorage.deleteAll();
+    return true;
+  }
 }

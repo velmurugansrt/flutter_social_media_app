@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_social_media_app/src/assets/styles/app_widget_size.dart';
 import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
 import 'package:flutter_social_media_app/src/data/firebase/app_firebase.dart';
+import 'package:flutter_social_media_app/src/data/store/app_storage.dart';
 import 'package:flutter_social_media_app/src/data/store/app_store.dart';
 import 'package:flutter_social_media_app/src/ui/navigation/screen_routes.dart';
 
@@ -74,6 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   _logoutButtonPressed() {
     AppFirebase().signOutGoogle();
+    AppStorage().removeAll();
     Navigator.of(context).pushReplacementNamed(ScreenRoutes.LOGIN_SCREEN);
   }
 }

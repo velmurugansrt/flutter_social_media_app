@@ -7,8 +7,4 @@ class InputValidator {
       LengthLimitingTextFieldFormatterFixed(count),
     ];
   }
-
-  static List<TextInputFormatter> password = <TextInputFormatter>[
-    // DateFormatter()
-  ];
 }
