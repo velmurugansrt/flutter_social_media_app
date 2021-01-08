@@ -4,8 +4,24 @@ abstract class HomeState {}
 
 class HomeInitialState extends HomeState {}
 
-class HomeCreatePostDoneState extends HomeState {}
+class HomeProgressState extends HomeState {}
 
-class HomePostsState extends HomeState {}
+class PostUploadPhotoUrlState extends HomeState {
+  String imgUrl;
+  PostUploadPhotoUrlState(this.imgUrl);
+}
 
-class HomeFailedState extends HomeState {}
+class HomeCreatePostDoneState extends HomeState {
+  String message;
+  HomeCreatePostDoneState(this.message);
+}
+
+class HomePostsState extends HomeState {
+  List<Posts> posts;
+  HomePostsState(this.posts);
+}
+
+class HomeFailedState extends HomeState {
+  String message;
+  HomeFailedState(this.message);
+}

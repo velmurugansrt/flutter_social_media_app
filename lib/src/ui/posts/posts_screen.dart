@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_social_media_app/src/assets/styles/app_widget_size.dart';
+import 'package:flutter_social_media_app/src/blocs/home/home_bloc.dart';
 import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_social_media_app/src/models/post/post_response_model.dart';
 
 class PostsScreen extends StatefulWidget {
   PostsScreen({Key key}) : super(key: key);
@@ -10,6 +13,17 @@ class PostsScreen extends StatefulWidget {
 }
 
 class _PostsScreenState extends State<PostsScreen> {
+  HomeBloc homeBloc;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      homeBloc = BlocProvider.of<HomeBloc>(context);
+      homeBloc.add(HomeFetchPostEvent());
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,13 +39,22 @@ class _PostsScreenState extends State<PostsScreen> {
       child: Column(
         children: [
           _buildHeading(),
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.only(bottom: AppWidgetSize.dimen_16),
-              itemCount: 4,
-              itemBuilder: (BuildContext context, int index) =>
-                  _buildPostWidget(index),
-            ),
+          BlocBuilder<HomeBloc, HomeState>(
+            condition: (prevState, state) => state is HomePostsState,
+            builder: (context, state) {
+              print('state $state');
+              if (state is HomePostsState) {
+                return Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.only(bottom: AppWidgetSize.dimen_16),
+                    itemCount: state.posts.length,
+                    itemBuilder: (BuildContext context, int index) =>
+                        _buildPostWidget(state.posts[index], index),
+                  ),
+                );
+              }
+              return Container();
+            },
           )
         ],
       ),
@@ -58,7 +81,7 @@ class _PostsScreenState extends State<PostsScreen> {
     );
   }
 
-  _buildPostWidget(int index) {
+  _buildPostWidget(Posts post, int index) {
     return Card(
       margin: EdgeInsets.only(top: index == 0 ? 0 : AppWidgetSize.dimen_24),
       elevation: 3,
@@ -66,15 +89,21 @@ class _PostsScreenState extends State<PostsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Image.network(
-            'https://placeimg.com/640/480/any',
-            height: AppWidgetSize.getSize(250),
-            fit: BoxFit.fill,
-          ),
+          post.images.isNotEmpty
+              ? FadeInImage.assetNetwork(
+                  height: AppWidgetSize.getSize(250),
+                  placeholder: 'lib/src/assets/images/app_logo.png',
+                  image: post.images[0],
+                )
+              : Image.network(
+                  'https://placeimg.com/640/480/any',
+                  height: AppWidgetSize.getSize(250),
+                  fit: BoxFit.fill,
+                ),
           Padding(
             padding: EdgeInsets.all(AppWidgetSize.dimen_8),
             child: Text(
-              'Scarface: The Movie',
+              post.heading,
               style: Theme.of(context).textTheme.headline6.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: AppWidgetSize.dimen_20,
@@ -91,8 +120,7 @@ class _PostsScreenState extends State<PostsScreen> {
                 style: Theme.of(context).textTheme.headline4,
                 children: <TextSpan>[
                   TextSpan(
-                    text:
-                        ' https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&',
+                    text: ' ' + post.link,
                     style: Theme.of(context).primaryTextTheme.headline3,
                   ),
                 ],
@@ -104,7 +132,7 @@ class _PostsScreenState extends State<PostsScreen> {
                 horizontal: AppWidgetSize.dimen_8,
                 vertical: AppWidgetSize.dimen_10),
             child: Text(
-              'Scarface is a 1983 American crime drama film directed by Brian De Palma and written by Oliver Stone. The remake of the 1932 film, it tells the story of Cuban refugee Tony Montana (Al Pacino), who arrives penniless in 1980s Miami but would go on to become a powerful drug lord.',
+              post.text,
               style: Theme.of(context)
                   .textTheme
                   .headline3

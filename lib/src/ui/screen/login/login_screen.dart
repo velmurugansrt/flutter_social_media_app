@@ -1,41 +1,61 @@
-import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_social_media_app/src/assets/app_images.dart';
 import 'package:flutter_social_media_app/src/assets/styles/app_widget_size.dart';
+import 'package:flutter_social_media_app/src/blocs/login/login_bloc.dart';
 import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
 import 'package:flutter_social_media_app/src/constants/storage_constants.dart';
 import 'package:flutter_social_media_app/src/data/firebase/app_firebase.dart';
 import 'package:flutter_social_media_app/src/data/store/app_storage.dart';
 import 'package:flutter_social_media_app/src/data/store/app_store.dart';
 import 'package:flutter_social_media_app/src/models/common/user_model.dart';
+import 'package:flutter_social_media_app/src/models/login/login_response_model.dart';
 import 'package:flutter_social_media_app/src/ui/navigation/screen_routes.dart';
+import 'package:flutter_social_media_app/src/ui/screen/base/base_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends BaseScreen {
   LoginScreen({Key key}) : super(key: key);
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends BaseScreenState<LoginScreen> {
+  LoginBloc loginBloc;
+
   @override
   void initState() {
     checkAuth();
+    loginBloc = BlocProvider.of<LoginBloc>(context);
+    loginBloc.listen(loginBlocListener);
     super.initState();
+  }
+
+  void loginBlocListener(state) {
+    if (state is LoginProgressState) {
+      startLoader();
+    } else {
+      stopLoader();
+    }
+    if (state is LoginSuccessState) {
+      navigateToHome();
+    }
   }
 
   void checkAuth() async {
     Map<String, dynamic> userDetails =
         await AppStorage().getData(StorageConstants.USER_DETAILS);
     if (userDetails != null) {
-      navigateToHome(userDetails);
+      AppStore()
+          .setUserDetails(UserModel.fromJson(userDetails['googleUserDetails']));
+      AppStore()
+          .setAuthDetails(AuthUser.fromJson(userDetails['loginUserDetails']));
+      navigateToHome();
     }
   }
 
-  navigateToHome(userDetails) {
-    AppStore().setUserDetails(UserModel.fromJson(userDetails));
+  navigateToHome() async {
     Navigator.of(context).pushReplacementNamed(ScreenRoutes.HOME_SCREEN);
   }
 
@@ -49,14 +69,17 @@ class _LoginScreenState extends State<LoginScreen> {
   _googleAuthPressed() async {
     User data = await AppFirebase().signInWithGoogle();
     if (data != null) {
-      Map<String, dynamic> userDetails = {
+      Map<String, String> userDetails = {
         'displayName': data.displayName,
         'email': data.email,
         'photoURL': data.photoURL,
         'uid': data.uid,
       };
-      AppStorage().setData(StorageConstants.USER_DETAILS, userDetails);
-      navigateToHome(userDetails);
+      Map<String, String> payload = {
+        'email': 'user1@gmail.com',
+        'password': '123456'
+      };
+      loginBloc.add(LoginSignInEvent(payload, userDetails));
     }
   }
 

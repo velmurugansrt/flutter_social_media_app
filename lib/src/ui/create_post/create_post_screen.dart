@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_social_media_app/src/assets/app_images.dart';
 import 'package:flutter_social_media_app/src/assets/styles/app_widget_size.dart';
+import 'package:flutter_social_media_app/src/blocs/home/home_bloc.dart';
 import 'package:flutter_social_media_app/src/constants/app_constants.dart';
 import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
 import 'package:flutter_social_media_app/src/data/store/app_store.dart';
 import 'package:flutter_social_media_app/src/data/validator/input_validator.dart';
+import 'package:flutter_social_media_app/src/ui/screen/base/base_screen.dart';
 import 'package:flutter_social_media_app/src/ui/widgets/circular_button_toggle_widget.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class CreatePostScreen extends StatefulWidget {
+class CreatePostScreen extends BaseScreen {
   CreatePostScreen({Key key}) : super(key: key);
 
   @override
   _CreatePostScreenState createState() => _CreatePostScreenState();
 }
 
-class _CreatePostScreenState extends State<CreatePostScreen> {
+class _CreatePostScreenState extends BaseScreenState<CreatePostScreen> {
   String targetValue = AppConstants.TOGGLE_BUTTON_LIST[0];
   final ImagePicker _picker = ImagePicker();
   TextEditingController _headingController = TextEditingController();
@@ -25,11 +27,37 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   TextEditingController _linkController = TextEditingController();
   List images = [];
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  HomeBloc homeBloc;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      homeBloc = BlocProvider.of<HomeBloc>(context);
+      homeBloc.listen(homeBlocListener);
+    });
+    super.initState();
+  }
+
+  void homeBlocListener(state) {
+    if (state is PostUploadPhotoUrlState) {
+      images.add(state.imgUrl);
+    } else if (state is HomeCreatePostDoneState) {
+      showSnackAlert(state.message);
+      _headingController.text = '';
+      _promoteController.text = '';
+      _linkController.text = '';
+
+      setState(() {
+        images = [];
+        targetValue = AppConstants.TOGGLE_BUTTON_LIST[0];
+      });
+    }
+  }
 
   _imgPicker(type) async {
     PickedFile pickedFile = await _picker.getImage(source: type);
     if (pickedFile != null) {
-      print('pickedFile ${pickedFile.path}');
+      homeBloc.add(HomeUploadImageEvent(pickedFile.path));
     }
   }
 
@@ -276,24 +304,25 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     String promoteText = _promoteController.text.trim();
     String linkText = _linkController.text.trim();
     if (headingText == '') {
-      showAlert(AppTextConstants.HEADING_ERROR);
+      showSnackAlert(AppTextConstants.HEADING_ERROR);
     } else if (promoteText == '') {
-      showAlert(AppTextConstants.PROMOTE_ERROR);
+      showSnackAlert(AppTextConstants.PROMOTE_ERROR);
     } else if (linkText == '') {
-      showAlert(AppTextConstants.LINK_ERROR);
+      showSnackAlert(AppTextConstants.LINK_ERROR);
     } else {
       Map payload = {
-        "heading": headingText,
-        "text": promoteText,
-        "images": images,
-        "link": linkText,
-        "target": targetValue,
-        "type": "announcment"
+        'heading': headingText,
+        'text': promoteText,
+        'images': images,
+        'link': linkText,
+        'target': targetValue,
+        'type': 'announcment'
       };
+      homeBloc.add(HomeCreatePostEvent(payload));
     }
   }
 
-  showAlert(msg) {
+  showSnackAlert(msg) {
     scaffoldKey.currentState.showSnackBar(
       SnackBar(
         duration: AppConstants.snackBarDuration,

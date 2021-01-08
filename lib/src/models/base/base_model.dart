@@ -3,26 +3,28 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class BaseModel {
-  bool isError;
+  bool isError = false;
   String message;
   dynamic data;
 
   BaseModel({this.isError, this.message, this.data});
 
   BaseModel.fromJson(Map<String, dynamic> jsonData) {
-    Map json = jsonDecode(jsonData['data']);
-    if (json.containsKey('is_error')) isError = json['is_error'];
-
-    if (json.containsKey('message')) message = json['message'];
-
-    if (json.containsKey('responseData') && json['responseData'] != '') {
-      data = json['responseData'];
+    Map json = jsonData;
+    if (json.containsKey('error')) {
+      isError = json['error'] != null;
+      message = isError ? jsonDecode(json['error'])['message'] : '';
     }
+    if (json.containsKey('message')) {
+      message = json['message'];
+    }
+
+    data = jsonData;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['is_error'] = this.isError;
+    data['error'] = this.isError;
     data['message'] = this.message;
     if (this.data != null) {
       data['data'] = this.data;
@@ -31,6 +33,7 @@ class BaseModel {
   }
 
   bool isSuccess() {
-    return isError != "false";
+    // ignore: unrelated_type_equality_checks
+    return !isError;
   }
 }

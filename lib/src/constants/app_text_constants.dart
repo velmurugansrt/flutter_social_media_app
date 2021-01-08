@@ -19,4 +19,11 @@ class AppTextConstants {
   static const String TERMS_CONDITIONS = 'Terms & Conditions';
   static const String LOGIN_WITH_GOOGLE = 'LOGIN WITH GOOGLE';
   static const String GOOGLE = 'Google';
+
+  // HTTP msg
+  static const String UPLOAD_SUCCESS = 'Photo upload successfully';
+  static const String UPLOAD_FAILED = 'Photo upload failed';
+  static const String UNABLE_TO_CONNECT =
+      'Unable to connect. Please Check Internet Connection';
+  static const String UN_AUTHORIZED = 'Unauthorized';
 }

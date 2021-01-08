@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
+import 'package:flutter_social_media_app/src/data/store/app_utils.dart';
+import 'package:flutter_social_media_app/src/models/login/login_response_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_social_media_app/src/data/store/app_store.dart';
 
@@ -11,37 +14,43 @@ class HTTPClient {
   final Duration _requestTimeout = Duration(seconds: REQUEST_TIMEOUT);
 
   final Duration _connectTimeout = Duration(seconds: CONNECT_TIMEOUT);
-  Map<String, String> _headers = {'Content-type': 'application/json'};
-  set headers(Map<String, String> headers) {
-    _headers = headers;
-  }
 
   Future<Map<String, dynamic>> postJSONRequest(
       {String url, Object data}) async {
     if (AppStore().getNetworkStatus()) {
       final String jsonRequest = json.encode(data);
       final String response = await postRequest(url: url, data: jsonRequest);
-      return json.decode(response) as Map<String, dynamic>;
+      if (response == "Unauthorized") {
+        Map<String, dynamic> error = {
+          'error': json.encode({'message': AppTextConstants.UN_AUTHORIZED}),
+        };
+        return error;
+      } else {
+        return json.decode(response) as Map<String, dynamic>;
+      }
     } else {
-      return {
-        'isError': 'true',
-        'message': 'Unable to connect. Please Check Internet Connection'
+      Map<String, dynamic> error = {
+        'error': json.encode({'message': AppTextConstants.UNABLE_TO_CONNECT}),
       };
+      return error;
     }
   }
 
   Future<String> postRequest({String url, String data}) async {
     final HttpClient client = HttpClient();
-    print('headers ${data}');
-
     try {
       client.connectionTimeout = _connectTimeout;
       final HttpClientRequest request = await client.postUrl(Uri.parse(url));
-      print('headers ${request.headers}');
       request.headers.set('Content-type', 'application/json');
-      request.headers.set('Content-Length', data.length);
+
+      AuthUser authDetails = AppStore().getAuthDetails();
+      if (authDetails != null)
+        request.headers
+            .set('Authorization', 'Bearer ' + authDetails.accessToken);
+
       if (AppStore().getSessionCookie() != null)
         request.headers.set('Cookie', AppStore().getSessionCookie());
+
       request.write(data);
       final HttpClientResponse response =
           await request.close().timeout(_requestTimeout);
@@ -51,19 +60,29 @@ class HTTPClient {
       print('HTTPClient Response> $sResponse');
       return sResponse;
     } catch (e) {
-      Map error = {
-        'isError': 'true',
-        'message': 'Unable to connect. Please Check Internet Connection'
-      };
-      return json.encode(error);
+      return getError(e);
     } finally {
       client.close();
     }
   }
 
+  String getError(e) {
+    Map<String, dynamic> error = {
+      'error': json.encode({'message': AppTextConstants.UNABLE_TO_CONNECT}),
+    };
+    return json.encode(error);
+  }
+
   Future<Map<String, dynamic>> getJSONRequest({String url}) async {
     final String response = await getRequest(url: url);
-    return json.decode(response) as Map<String, dynamic>;
+    if (response == "Unauthorized") {
+      Map<String, dynamic> error = {
+        'error': json.encode({'message': AppTextConstants.UN_AUTHORIZED}),
+      };
+      return error;
+    } else {
+      return json.decode(response) as Map<String, dynamic>;
+    }
   }
 
   Future<String> getRequest({String url}) async {
@@ -73,6 +92,12 @@ class HTTPClient {
       client.connectionTimeout = _connectTimeout;
       final HttpClientRequest request = await client.getUrl(Uri.parse(url));
       request.headers.set('Content-type', 'application/json');
+
+      AuthUser authDetails = AppStore().getAuthDetails();
+      if (authDetails != null)
+        request.headers
+            .set('Authorization', 'Bearer ' + authDetails.accessToken);
+
       if (AppStore().getSessionCookie() != null)
         request.headers.set('Cookie', AppStore().getSessionCookie());
       final HttpClientResponse response =
@@ -106,12 +131,25 @@ class HTTPClient {
     AppStore().setCookie(output);
   }
 
-  uploadFile(String filename, String url) async {
+  uploadFile({String url, String path}) async {
     dynamic request = http.MultipartRequest('POST', Uri.parse(url));
-    request.files.add(http.MultipartFile('image',
-        File(filename).readAsBytes().asStream(), File(filename).lengthSync(),
-        filename: filename.split('/').last));
-    dynamic res = await request.send();
-    print('res ${res}');
+
+    AuthUser authDetails = AppStore().getAuthDetails();
+    if (authDetails != null)
+      request.headers
+          .addAll({'Authorization': 'Bearer ' + authDetails.accessToken});
+
+    request.files.add(http.MultipartFile(
+        'image', File(path).readAsBytes().asStream(), File(path).lengthSync(),
+        filename: path.split('/').last));
+    dynamic response = await request.send();
+    final respStr = await response.stream.bytesToString();
+    if (response.statusCode == 200) {
+      Map decodeData = json.decode(respStr);
+      decodeData['message'] = AppTextConstants.UPLOAD_SUCCESS;
+      return decodeData;
+    } else {
+      return getError(AppTextConstants.UPLOAD_FAILED);
+    }
   }
 }

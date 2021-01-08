@@ -1,19 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_social_media_app/src/assets/app_images.dart';
+import 'package:flutter_social_media_app/src/blocs/home/home_bloc.dart';
 import 'package:flutter_social_media_app/src/constants/app_text_constants.dart';
 import 'package:flutter_social_media_app/src/ui/create_post/create_post_screen.dart';
 import 'package:flutter_social_media_app/src/ui/posts/posts_screen.dart';
 import 'package:flutter_social_media_app/src/ui/profile/profile_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_social_media_app/src/ui/screen/base/base_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends BaseScreen {
   HomeScreen({Key key}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends BaseScreenState<HomeScreen> {
   int _tabIndex = 0;
+  HomeBloc homeBloc;
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      homeBloc = BlocProvider.of<HomeBloc>(context);
+      homeBloc.listen(homeBlocListener);
+    });
+    super.initState();
+  }
+
+  void homeBlocListener(state) {
+    if (state is HomeProgressState) {
+      startLoader();
+    } else {
+      stopLoader();
+    }
+    if (state is HomeFailedState) {
+      showAlert(state.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Widget> screens = [
